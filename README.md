@@ -1,5 +1,7 @@
 # 🎵 SampleFlow v2.0
 
+> ⚠️ **Work in Progress** — the app is functional but still in active development. Bugs are expected. Always keep backups of your samples before organizing.
+
 > A lightweight desktop app for organizing and cleaning your music sample library.
 
 ![SampleFlow](https://img.shields.io/badge/version-2.0-00ADB5?style=flat-square)
