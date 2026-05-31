@@ -20,14 +20,14 @@ echo [1/4] Python OK
 
 :: ── Step 2: install / upgrade PyInstaller ───────────────────────
 echo [2/4] Installing PyInstaller...
-pip install --quiet --upgrade pyinstaller
+python -m pip install --quiet --upgrade pyinstaller
 if errorlevel 1 ( echo [ERROR] pip failed & goto :fail )
 
 :: ── Step 3: PyInstaller — build the executable bundle ───────────
 echo [3/4] Building executable with PyInstaller...
 echo        (first run takes 5-15 min due to librosa/numba)
 echo.
-pyinstaller SampleFlow.spec --clean --noconfirm
+python -m PyInstaller SampleFlow.spec --clean --noconfirm
 if errorlevel 1 ( echo [ERROR] PyInstaller failed & goto :fail )
 
 if not exist "dist\SampleFlow\SampleFlow.exe" (
