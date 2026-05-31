@@ -24,12 +24,18 @@ from typing import Iterator, Optional
 DEFAULT_FILENAME = "sampleflow.db"
 
 
-def _default_db_path() -> Path:
-    """Return default DB path at the project root (two parents up).
+def _user_data_dir() -> Path:
+    """Writable data directory — AppData when frozen, project root otherwise."""
+    import sys
+    if getattr(sys, "frozen", False):
+        base = Path(os.environ.get("APPDATA") or Path.home()) / "SampleFlow"
+        base.mkdir(parents=True, exist_ok=True)
+        return base
+    return Path(__file__).resolve().parents[2]
 
-    File layout: <workspace-root>/sampleflow.db
-    """
-    return Path(__file__).resolve().parents[2] / DEFAULT_FILENAME
+
+def _default_db_path() -> Path:
+    return _user_data_dir() / DEFAULT_FILENAME
 
 
 def get_db_path(path: Optional[str] = None) -> Path:

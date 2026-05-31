@@ -77,9 +77,14 @@ class MainWindow(QMainWindow):
         self._deep_resolved: int = 0
         self._scan_complete: bool = False
         self._scan_total: int = 0
-        self._settings_path = os.path.normpath(
-            os.path.join(os.path.dirname(__file__), "..", "..", "settings.json")
-        )
+        import sys as _sys
+        if getattr(_sys, "frozen", False):
+            from app.core.database import _user_data_dir
+            self._settings_path = str(_user_data_dir() / "settings.json")
+        else:
+            self._settings_path = os.path.normpath(
+                os.path.join(os.path.dirname(__file__), "..", "..", "settings.json")
+            )
 
         from app import translations as _tr
         _tr.set_lang(self._load_settings().get("lang", "en"))
