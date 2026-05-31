@@ -43,7 +43,7 @@ Source: "..\dist\SampleFlow\*"; DestDir: "{app}"; \
 [Icons]
 Name: "{group}\{#AppName}";           Filename: "{app}\{#AppExeName}"
 Name: "{group}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
-Name: "{commondesktop}\{#AppName}";   Filename: "{app}\{#AppExeName}"; \
+Name: "{userdesktop}\{#AppName}";     Filename: "{app}\{#AppExeName}"; \
     Tasks: desktopicon
 
 [Run]

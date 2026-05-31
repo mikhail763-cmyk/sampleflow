@@ -68,8 +68,10 @@ if "%ISCC%"=="" (
 )
 
 mkdir "dist\installer" 2>nul
-%ISCC% "installer\SampleFlow.iss"
+:: Output to %TEMP% first to avoid antivirus blocking exe creation in project folder
+%ISCC% "installer\SampleFlow.iss" /O"%TEMP%\SFBuild"
 if errorlevel 1 ( echo [ERROR] Inno Setup compilation failed & goto :fail )
+copy /Y "%TEMP%\SFBuild\SampleFlow_v2.0_Setup.exe" "dist\installer\" >nul
 
 echo.
 echo ============================================================
