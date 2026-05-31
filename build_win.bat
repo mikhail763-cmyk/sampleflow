@@ -49,15 +49,18 @@ for %%P in (
 )
 
 if "%ISCC%"=="" (
-    echo.
-    echo [SKIP] Inno Setup not found.
-    echo        Download free from: https://jrsoftware.org/isdownload.php
-    echo        Then run manually:
-    echo          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\SampleFlow.iss
+    echo [SKIP] Inno Setup not installed — создаю ZIP-дистрибутив...
+    mkdir "dist\installer" 2>nul
+    powershell -NoProfile -Command ^
+        "Compress-Archive -Path 'dist\SampleFlow\*' -DestinationPath 'dist\installer\SampleFlow_v2.0_portable.zip' -Force; $s=[math]::Round((Get-Item 'dist\installer\SampleFlow_v2.0_portable.zip').Length/1MB); Write-Host \"ZIP ready: $s MB\""
     echo.
     echo ============================================================
-    echo  PyInstaller bundle is ready in:  dist\SampleFlow\
-    echo  Run it directly:                 dist\SampleFlow\SampleFlow.exe
+    echo  Портативный ZIP:  dist\installer\SampleFlow_v2.0_portable.zip
+    echo  Просто распакуйте и запустите SampleFlow.exe
+    echo.
+    echo  Для .exe-установщика установите Inno Setup 6 (бесплатно):
+    echo  https://jrsoftware.org/isdownload.php
+    echo  Затем запустите:  build_win.bat  снова
     echo ============================================================
     goto :ok
 )
@@ -73,10 +76,13 @@ echo ============================================================
 
 :ok
 endlocal
+pause
 exit /b 0
 
 :fail
 echo.
-echo [BUILD FAILED]
+echo [BUILD FAILED] — см. текст ошибки выше
+echo.
 endlocal
+pause
 exit /b 1
