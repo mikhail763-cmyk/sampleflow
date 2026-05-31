@@ -25,7 +25,7 @@ from . import audio_dsp, database
 executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 
 
-AUDIO_EXTS = {".wav", ".mp3", ".aiff", ".flac"}
+AUDIO_EXTS = {".wav", ".mp3", ".aiff", ".flac", ".ogg", ".m4a"}
 MIN_FILE_SIZE = 10240  # 10KB
 
 
@@ -97,12 +97,10 @@ def _analyze_type_deep_impl(file_path: str) -> str:
 
 
 def get_fast_file_hash(file_path: str) -> str:
-    import os, hashlib
-
     file_size = os.path.getsize(file_path)
-    if file_size < 1024 * 1024:
+    if file_size < 5 * 1024 * 1024:  # < 5 MB: first 64 KB is enough
         with open(file_path, "rb") as f:
-            return hashlib.md5(f.read()).hexdigest()
+            return hashlib.md5(f.read(64 * 1024)).hexdigest()
     with open(file_path, "rb") as f:
         first_chunk = f.read(512 * 1024)
         f.seek(-512 * 1024, os.SEEK_END)
@@ -179,12 +177,23 @@ class ScannerThread(QThread):
 
             # Gather full list of files first (so we can report total)
             files = []
+            skipped_ext = 0
+            skipped_size = 0
+            skipped_error = 0
             for root in self.roots:
                 if not self._running:
                     break
                 if os.path.isfile(root):
-                    if _is_audio_file(root) and os.path.getsize(root) >= MIN_FILE_SIZE:
-                        files.append(root)
+                    if _is_audio_file(root):
+                        try:
+                            if os.path.getsize(root) >= MIN_FILE_SIZE:
+                                files.append(root)
+                            else:
+                                skipped_size += 1
+                        except OSError:
+                            skipped_error += 1
+                    else:
+                        skipped_ext += 1
                 else:
                     for dirpath, _, filenames in os.walk(root, followlinks=True):
                         if not self._running:
@@ -192,17 +201,20 @@ class ScannerThread(QThread):
                         for fn in filenames:
                             full = os.path.join(dirpath, fn)
                             if not _is_audio_file(full):
+                                skipped_ext += 1
                                 continue
                             try:
                                 if os.path.getsize(full) >= MIN_FILE_SIZE:
                                     files.append(full)
+                                else:
+                                    skipped_size += 1
                             except OSError:
-                                pass
+                                skipped_error += 1
                         if not self._running:
                             break
 
             total = len(files)
-            print(f"Найдено файлов: {total}")
+            print(f"[scan] Найдено: {total} | Пропущено расширение: {skipped_ext} | Маленький размер (<{MIN_FILE_SIZE}B): {skipped_size} | Ошибка доступа: {skipped_error}")
             self.scan_started.emit(total)
 
             # process in batches of 10
@@ -211,7 +223,7 @@ class ScannerThread(QThread):
                 if not self._running:
                     break
                 batch.append(fpath)
-                if len(batch) >= 10:
+                if len(batch) >= 50:
                     self._process_batch(batch)
                     scanned += len(batch)
                     # emit progressive counts
@@ -219,7 +231,7 @@ class ScannerThread(QThread):
                     batch = []
                     if not self._running:
                         break
-                    time.sleep(0.05)
+                    time.sleep(0.02)
             if batch and self._running:
                 self._process_batch(batch)
                 scanned += len(batch)
@@ -237,7 +249,6 @@ class ScannerThread(QThread):
                 self._process_single(p)
             except Exception as e:
                 self.error.emit(str(e))
-            time.sleep(0.01)
 
     def _process_single(self, file_path: str) -> None:
         # Lazy import avoids the circular dependency with organizer.py

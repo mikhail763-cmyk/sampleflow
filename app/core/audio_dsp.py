@@ -24,12 +24,19 @@ BPM_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Full key with explicit mode suffix — searched first (higher priority)
+# Full key with explicit mode suffix — searched first (highest priority)
+# Matches: Am, Fmaj, Bbmin, F#m, Ebmaj, etc.
 KEY_FULL_RE = re.compile(
     r"(?:^|_)([A-G](?:#|b)?(?:min|maj|m))(?=\.wav|_|$)",
     re.IGNORECASE,
 )
-# Bare note letter — fallback only when no full key found
+# Note + underscore + mode — second priority
+# Matches: F_m, A_minor, D_min, C_major, Bb_maj, etc.
+KEY_SPLIT_RE = re.compile(
+    r"(?:^|_)([A-G](?:#|b)?)_(minor|major|min|maj|m)(?=\.wav|_|$)",
+    re.IGNORECASE,
+)
+# Bare note letter — lowest priority fallback
 KEY_BARE_RE = re.compile(
     r"(?:^|_)([A-G](?:#|b)?)(?=\.wav|_|$)",
     re.IGNORECASE,
@@ -56,10 +63,21 @@ def _parse_from_filename(filename: str) -> Tuple[Optional[int], Optional[str]]:
         except Exception:
             bpm = None
 
-    m2 = KEY_FULL_RE.search(filename) or KEY_BARE_RE.search(filename)
-    if m2:
+    m_full  = KEY_FULL_RE.search(filename)
+    m_split = KEY_SPLIT_RE.search(filename)
+    m_bare  = KEY_BARE_RE.search(filename)
+
+    if m_full:
+        raw = m_full.group(1)
+    elif m_split:
+        raw = m_split.group(1) + m_split.group(2)  # join note + mode
+    elif m_bare:
+        raw = m_bare.group(1)
+    else:
+        raw = None
+
+    if raw:
         try:
-            raw = m2.group(1)
             key = _normalize_key(raw)
         except Exception:
             key = None

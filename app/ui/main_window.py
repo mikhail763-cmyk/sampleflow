@@ -76,6 +76,7 @@ class MainWindow(QMainWindow):
         self._key_done: int = 0
         self._deep_resolved: int = 0
         self._scan_complete: bool = False
+        self._scan_total: int = 0
         self._settings_path = os.path.normpath(
             os.path.join(os.path.dirname(__file__), "..", "..", "settings.json")
         )
@@ -92,7 +93,7 @@ class MainWindow(QMainWindow):
         self.statusBar().setSizeGripEnabled(False)
         self._grip = _StyledSizeGrip(self)
         self._grip.setFixedSize(16, 16)
-        self._grip.show()
+        self.statusBar().addPermanentWidget(self._grip)
 
     def _create_actions(self):
         self._act_scan = QAction("", self)
@@ -411,9 +412,11 @@ QPushButton:pressed { background: #1A1A1A; }
         if self._scanner and self._scanner.isRunning():
             return
 
-        if dlg_question(self, "Очистка базы",
-                        "Удалить записи размером меньше 10240 байт из базы перед сканированием?",
-                        yes="Да", no="Нет"):
+        from app import translations as _tr
+        t = _tr.tr
+        if dlg_question(self, t("dlg_clear_db_title"),
+                        t("dlg_clear_db_pre_scan"),
+                        yes=t("dlg_yes"), no=t("dlg_no")):
             self.cleanup_database(show_result=False)
 
         from app.core.scanner import ScannerThread
@@ -440,6 +443,8 @@ QPushButton:pressed { background: #1A1A1A; }
 
     def cleanup_database(self, show_result: bool = True) -> None:
         from app.core import database
+        from app import translations as _tr
+        t = _tr.tr
 
         database.init_db()
         removed = database.delete_all_samples()
@@ -447,7 +452,7 @@ QPushButton:pressed { background: #1A1A1A; }
         self.view.tab_dups.setRowCount(0)
         self.view.load_data()
         if show_result:
-            dlg_info(self, "Очистка базы", f"Удалено {removed} строк из таблицы samples.")
+            dlg_info(self, t("dlg_clear_db_title"), t("dlg_clear_db_done").format(n=removed))
 
     def stop_scan(self):
         if self._scanner:
@@ -516,15 +521,17 @@ QPushButton:pressed { background: #1A1A1A; }
         self.statusBar().showMessage("Organizing… 0%")
 
     def detect_key_for_selected(self) -> None:
+        from app import translations as _tr
+        t = _tr.tr
         current_tab = self.view.tabs.currentWidget()
         file_path = current_tab.get_current_file_path() if current_tab else None
 
         if file_path:
             self._submit_key_detection(file_path)
         else:
-            if dlg_question(self, "Detect Key",
-                            "Проанализировать все файлы без тональности (Unknown)?",
-                            yes="Да", no="Нет"):
+            if dlg_question(self, t("detect_key"),
+                            t("dlg_detect_key_all"),
+                            yes=t("dlg_yes"), no=t("dlg_no")):
                 self._detect_key_for_unknown_samples()
 
     def _submit_key_detection(self, file_path: str) -> None:
@@ -547,6 +554,8 @@ QPushButton:pressed { background: #1A1A1A; }
 
     def _detect_key_for_unknown_samples(self) -> None:
         from app.core import database
+        from app import translations as _tr
+        t = _tr.tr
 
         samples = database.query_samples(search=None, duplicates_only=False)
         pending = [
@@ -554,7 +563,7 @@ QPushButton:pressed { background: #1A1A1A; }
             if not s["audio_key"] and s["file_path"] and os.path.exists(s["file_path"])
         ]
         if not pending:
-            dlg_info(self, "Detect Key", "Нет файлов без тональности.")
+            dlg_info(self, t("detect_key"), t("dlg_no_files_without_key"))
             return
 
         self._key_total = len(pending)
@@ -663,6 +672,7 @@ QPushButton:pressed { background: #1A1A1A; }
 
     def _on_scan_started(self, total: int) -> None:
         try:
+            self._scan_total = total
             self._progress.setMaximum(total)
             self._progress.setValue(0)
             self._progress_label.setText("0%")
@@ -727,8 +737,16 @@ QPushButton:pressed { background: #1A1A1A; }
         self._scanner.start()
 
     def _on_scan_finished(self) -> None:
+        from app import translations as _tr
+        t = _tr.tr
         self._scan_complete = True
         scanner = self._scanner
+
+        # Always show scan-complete notification first.
+        self.statusBar().showMessage(
+            t("status_scan_complete_n").format(n=self._scan_total), 5000
+        )
+
         if scanner and scanner._deep_total > 0:
             # Deep analysis still running — transition progress bar to deep mode.
             total = scanner._deep_total
@@ -737,7 +755,6 @@ QPushButton:pressed { background: #1A1A1A; }
             self._progress.setValue(done)
             pct = int(done / total * 100) if total > 0 else 0
             self._progress_label.setText(f"{pct}%")
-            self.statusBar().showMessage(f"Анализ типов: {done}/{total} файлов… {pct}%")
             # If all deep tasks already finished before scan ended, finalize now.
             if done >= total:
                 self._finalize_deep_analysis(total)
@@ -745,15 +762,18 @@ QPushButton:pressed { background: #1A1A1A; }
             self._progress.setMaximum(0)
             self._progress.setValue(0)
             self._progress_label.setText("")
-            self.statusBar().showMessage("Сканирование завершено", 5000)
 
     def _finalize_deep_analysis(self, total: int) -> None:
+        from app import translations as _tr
+        t = _tr.tr
         self._progress.setMaximum(0)
         self._progress.setValue(0)
         self._progress_label.setText("")
         resolved = self._deep_resolved
         self.statusBar().showMessage(
-            f"✓ Анализ завершён — определено {resolved} из {total} файлов",
+            t("status_scan_complete_n").format(n=self._scan_total)
+            + "  |  "
+            + t("status_analysis_done").format(resolved=resolved, total=total),
             8000,
         )
         self._deep_resolved = 0
@@ -768,11 +788,17 @@ QPushButton:pressed { background: #1A1A1A; }
 
     def _on_deep_progress(self, done: int, total: int) -> None:
         try:
+            from app import translations as _tr
+            t = _tr.tr
             self._progress.setMaximum(total)
             self._progress.setValue(done)
             pct = int(done / total * 100) if total > 0 else 0
             self._progress_label.setText(f"{pct}%")
-            self.statusBar().showMessage(f"Анализ типов: {done}/{total} файлов… {pct}%")
+            self.statusBar().showMessage(
+                t("status_scan_complete_n").format(n=self._scan_total)
+                + "  |  "
+                + t("status_type_analysis").format(done=done, total=total, pct=pct)
+            )
             # Only finalize when the scan thread has also finished — otherwise
             # _deep_total is still growing and done==total is a false positive.
             if self._scan_complete and done >= total:

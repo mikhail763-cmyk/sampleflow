@@ -21,31 +21,44 @@ TYPE_KEYWORDS = [
     ("Vocal",     [r"\bvocal\b", r"\bvox\b", r"\bvoice\b", r"\bchop\b", r"\bacapella\b",
                    r"\badlib\b", r"\bharmony\b", r"\bchoir\b", r"\btopline\b", r"\bformant\b"]),
     # 2. FX (foley merged in)
-    ("FX",        [r"\briser\b", r"\bsweep\b", r"\bdownlifter\b", r"\bimpact\b", r"\bwhoosh\b",
-                   r"\btransition\b", r"\bglitch\b", r"\breverse\b", r"\bnoise\b", r"\bzap\b",
-                   r"\bfoley\b", r"\bfx\b", r"\beffect\b"]),
+    ("FX",        [r"\briser\b", r"\bsweep\b", r"\bdownlifter\b", r"\buplifter\b", r"\bimpact\b",
+                   r"\bwhoosh\b", r"\btransition\b", r"\bglitch\b", r"\breverse\b", r"\bnoise\b",
+                   r"\bzap\b", r"\bfoley\b", r"\bfx\b", r"\beffect\b"]),
     # 3. Kick before Bass — "bass_kick.wav" → Kick, not Bass
     ("Kick",      [r"\bkick\b", r"\bbd\b", r"\bbass[\s_]drum\b", r"\bbump\b"]),
     # 4. Melodic/harmonic types
     ("Bass",      [r"\bbass\b", r"\bbassline\b", r"\bsub\b", r"\b808\b"]),
     ("Lead",      [r"\blead\b", r"\bsynth\b", r"\bmono\b"]),
-    ("Melodic",   [r"\bguitar\b", r"\bpiano\b", r"\bkeys\b", r"\bstrings\b", r"\bviolin\b",
-                   r"\bflute\b", r"\bshakuhachi\b", r"\bbrass\b", r"\bhorn\b", r"\bsax\b",
-                   r"\borgan\b", r"\bharp\b", r"\bbell\b", r"\bensemble\b", r"\barp\b",
-                   r"\bmelody\b", r"\briff\b", r"\bhook\b", r"\bchord\b", r"\bstab\b",
-                   r"\bpluck\b", r"\bpad\b", r"\brhodes\b", r"\bwurlitzer\b", r"\bmarimba\b",
-                   r"\bvibraphone\b", r"\bsitar\b", r"\boud\b"]),
+    ("Melodic",   [r"\bguitar\b", r"\bpiano\b", r"\bgrand\b", r"\bkeys?\d*\b",
+                   r"\bstrings\b", r"\bviolin\b", r"\bflute\b", r"\bshakuhachi\b",
+                   r"\bbrass\b", r"\bhorn\b", r"\bsax\b", r"\borgan\b", r"\bharp\b",
+                   r"\bbell\b", r"\bensemble\b", r"\barp\b", r"\bmelod(y|ic)\b",
+                   r"\briff\b", r"\bhook\b", r"\bchord\b", r"\bstab\b", r"\bpluck\b",
+                   r"\bpad\b", r"\brhodes\b", r"\bwurlitzer\b", r"\bmarimba\b",
+                   r"\bvibraphone\b", r"\bxylophone\b", r"\bglockenspiel\b",
+                   r"\bsitar\b", r"\boud\b", r"\bivory\b", r"\bmallet\b", r"\bnylon\b",
+                   r"\bkit\b", r"\blog\s+drum\b"]),
     # 5. Drum Loop before remaining drum one-shots
-    ("Drum Loop", [r"\bdrum[\s_]?loop\b", r"\bdrumloop\b", r"\bbeat\b", r"\bgroove\b",
-                   r"\bbreak\b", r"\bbreakbeat\b"]),
+    ("Drum Loop", [r"\bdrum[\s_]?loop\b", r"\bdrums[\s_]?\w*[\s_]?loop\b",
+                   r"\bdrum[\s_]top[\s_]loop\b", r"\bdrumloop\b",
+                   r"\bgroove\b", r"\bbreak\b", r"\bbreakbeat\b"]),
     # 6. Remaining drum one-shots
     ("Snare",     [r"\bsnare\b", r"\bsd\b", r"\bclap\b", r"\bsnap\b", r"\brimshot\b", r"\brim\b"]),
     ("Hi-Hat",    [r"\bhihat\b", r"\bhi-hat\b", r"\bhat\b", r"\bhh\b",
-                   r"\bopen[\s_]hat\b", r"\bclosed[\s_]hat\b"]),
+                   r"\bopen[\s_]hat\b", r"\bclosed[\s_]hat\b", r"\bdrum[\s_]top\b"]),
     ("Cymbal",    [r"\bcymbal\b", r"\bcrash\b", r"\bride\b", r"\bsplash\b"]),
-    ("Perc",      [r"\bperc\b", r"\bpercussion\b", r"\bshaker\b", r"\btambourine\b",
-                   r"\bconga\b", r"\bbongo\b", r"\btom\b", r"\btabla\b", r"\bdarbuka\b",
-                   r"\bcowbell\b", r"\btriangle\b"]),
+    # Perc: \bperc\w*\b catches perc/percs/percussion/percloop/perconeshot etc.
+    # otherperc needs explicit pattern — "perc" is mid-word there, no leading \b
+    ("Perc",      [r"\bperc\w*\b", r"\bshaker\b", r"\btambourine\b",
+                   r"\bconga\b", r"\bcongaloop\b", r"\bbongo\b", r"\btom\b",
+                   r"\btabla\b", r"\bdarbuka\b", r"\bdarbouka\b", r"\bdjembe\b",
+                   r"\bcowbell\b", r"\btriangle\b", r"\bfill\b", r"\bdrums\b",
+                   r"\bmetal\s*loop\b", r"\botherperc\b"]),
+    # 7. Last-resort catches — checked after ALL drum one-shots so specific types win.
+    # "beat" standalone (e.g. BEAT_01_B_126) → Drum Loop; snare/hat/perc still override.
+    ("Drum Loop", [r"\bbeat\b"]),
+    # "afrobeat" compound word has no boundary before "beat" so \bbeat\b misses it.
+    ("Melodic",   [r"\bafrobeat\b"]),
 ]
 
 # Types that get full hierarchy: Category/Subtype/Key
